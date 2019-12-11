@@ -1,6 +1,14 @@
 @PACKAGE_INIT@
+include(CMakeFindDependencyMacro)
+
+find_dependency(Qt5 REQUIRED COMPONENTS
+  Core
+  Widgets
+  Concurrent)
+
 
 set(OPTION_SCALAR_DOUBLE @OPTION_SCALAR_DOUBLE@)
+set(CC_CORE_LIB_LIBRARIES CC_CORE_LIB::CC_CORE_LIB)
 
 if ( OPTION_SCALAR_DOUBLE )
   add_definitions( -DSCALAR_TYPE_DOUBLE )
