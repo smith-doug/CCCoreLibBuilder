@@ -1,25 +1,57 @@
-cmake_minimum_required(VERSION 3.0)
+cmake_minimum_required(VERSION 3.10)
 
 cmake_policy(PUSH)
+
+set(CC_PATH_STR "../CloudCompare/CC" CACHE STRING "Path to CloudCompare folder")
+get_filename_component(_CC_PATH ${CC_PATH_STR} ABSOLUTE)
+
+
 
 # Options
 option( COMPILE_CC_CORE_LIB_WITH_QT "Check to compile CC_CORE_LIB with Qt (to enable parallel processing)" ON )
 option( COMPILE_CC_CORE_LIB_WITH_CGAL "Check to compile CC_CORE_LIB with CGAL lib. (to enable Delaunay 2.5D triangulation with a GPL compliant licence)" OFF )
-option( COMPILE_CC_CORE_LIB_WITH_TBB " Check to compile CC_CORE_LIB with Intel Threading Building Blocks lib (enables some parallel processing )" OFF )
+option( COMPILE_CC_CORE_LIB_WITH_TBB " Check to compile CC_CORE_LIB with Intel Threading Building Blocks lib (enables some parallel processing )" ON )
 option( COMPILE_CC_CORE_LIB_SHARED "Check to compile CC_CORE_LIB as a shared library (DLL/so)" ON )
+set( OPTION_SCALAR_DOUBLE OFF CACHE BOOL "Check to define ScalarType as double"  )
+
+#set(CMAKE_INSTALL_PREFIX "/usr")
 
 # to compile CCLib only! (CMake implicitly imposes to declare a project before anything...)
 project( CC_CORE_LIB VERSION 1.0 )
 
-include ( ../cmake/CMakePolicies.cmake )
-include ( ../cmake/CMakeSetCompilerOptions.cmake )
+
+
+if ( OPTION_SCALAR_DOUBLE )
+  add_definitions( -DSCALAR_TYPE_DOUBLE )
+else()
+  add_definitions( -DSCALAR_TYPE_FLOAT )
+endif()
+
+
+SET(CPACK_GENERATOR "DEB")
+SET(CPACK_PACKAGE_VENDOR "SwRI")
+SET(CPACK_PACKAGE_CONTACT "douglas.smith@swri.org")
+set(CPACK_DEBIAN_PACKAGE_ARCHITECTURE "amd64")
+set(CPACK_PACKAGE_VERSION_MAJOR 1)
+set(CPACK_PACKAGE_VERSION_MINOR 0)
+set(CPACK_PACKAGE_VERSION_PATCH 0)
+
+
+set(INSTALL_DESTINATIONS ${CMAKE_INSTALL_PREFIX}/bin )
+
+
+
+include ( ${_CC_PATH}/../cmake/CMakePolicies.cmake )
+include ( ${_CC_PATH}/../cmake/CMakeSetCompilerOptions.cmake )
+
+include(CMakePackageConfigHelpers)
 
 if (COMPILE_CC_CORE_LIB_WITH_CGAL)
-	include( cmake/CGALSupport.cmake )
+	include( ${_CC_PATH}/cmake/CGALSupport.cmake )
 endif()
 
 if (COMPILE_CC_CORE_LIB_WITH_TBB)
-	include( cmake/FindTBB.cmake )
+	include( ${_CC_PATH}/cmake/FindTBB.cmake )
 else()
 	if (NOT WIN32)
 		message( WARNING "CCLib configured without parallel algorithm capabilities - see COMPILE_CC_CORE_LIB_WITH_TBB" )
@@ -28,18 +60,23 @@ endif()
 
 # Additional dependencies (only Qt in fact)
 if (COMPILE_CC_CORE_LIB_WITH_QT)
-	include( ../cmake/CMakeExternalLibs.cmake )
+	include( ${_CC_PATH}/../cmake/CMakeExternalLibs.cmake )
 endif()
 
-include_directories( ${CMAKE_CURRENT_SOURCE_DIR}/include )
 
-file( GLOB header_list include/*.h)
-file( GLOB source_list src/*.cpp src/*.h)
+
+#include_directories( ${CMAKE_CURRENT_SOURCE_DIR}/include )
+
+file( GLOB header_list ${_CC_PATH}/include/*.h)
+file( GLOB source_list ${_CC_PATH}/src/*.cpp src/*.h)
+
+#set(INCLUDE_INSTALL_DIR include/ ...  )
+#set(LIB_INSTALL_DIR lib/)
 
 if ( WIN32 )
 	# Add Qt5 natvis file
 	if ( COMPILE_CC_CORE_LIB_WITH_QT )
-		list( APPEND header_list ${CMAKE_CURRENT_SOURCE_DIR}/../scripts/windows/qt5.natvis )
+		list( APPEND header_list ${_CC_PATH}/../scripts/windows/qt5.natvis )
 		#message(${header_list})
 	endif()
 endif()
@@ -55,11 +92,17 @@ else()
 	target_compile_definitions( ${PROJECT_NAME} PRIVATE CC_CORE_LIB_STATIC_DEFINE )	
 endif()
 
+target_include_directories(CC_CORE_LIB 
+	PUBLIC
+		$<BUILD_INTERFACE:${_CC_PATH}/include>
+    $<INSTALL_INTERFACE:include>
+	 )
+
 # generate the export header file
 include( GenerateExportHeader )
 
 generate_export_header( ${PROJECT_NAME}
-	EXPORT_FILE_NAME ${CMAKE_CURRENT_SOURCE_DIR}/include/CCCoreLibExport.h
+	EXPORT_FILE_NAME ${_CC_PATH}/include/CCCoreLibExport.h
 	EXPORT_MACRO_NAME CC_CORE_LIB_API
 )
 
@@ -81,7 +124,7 @@ if ( COMPILE_CC_CORE_LIB_WITH_QT )
 endif()
 
 # Load advanced scripts
-include( ../cmake/CMakeInclude.cmake )
+include( ${_CC_PATH}/../cmake/CMakeInclude.cmake )
 
 if ( COMPILE_CC_CORE_LIB_SHARED )
 	# Install (shared) library to specified destinations
@@ -90,7 +133,52 @@ if ( COMPILE_CC_CORE_LIB_SHARED )
 			install_shared( CC_CORE_LIB ${dest} 1 )
 		endforeach()
 	else()
-		install_shared( CC_CORE_LIB ${CMAKE_INSTALL_LIBDIR}/cloudcompare 0 ) #default destination: /usr/lib/cloudcompare
+		#install_shared( CC_CORE_LIB ${CMAKE_INSTALL_LIBDIR}/cloudcompare 0 ) #default destination: /usr/lib/cloudcompare
+		set_target_properties(CC_CORE_LIB PROPERTIES PUBLIC_HEADER "${header_list}")
+
+		install(TARGETS CC_CORE_LIB
+        EXPORT CC_CORE_LIBTargets
+        LIBRARY DESTINATION lib
+        ARCHIVE DESTINATION lib
+        RUNTIME DESTINATION bin
+        INCLUDES DESTINATION include
+        PUBLIC_HEADER DESTINATION include/cloudcompare
+        )
+
+		include( GNUInstallDirs )		
+
+    install(EXPORT CC_CORE_LIBTargets
+        FILE CC_CORE_LIBTargets.cmake
+        NAMESPACE CC_CORE_LIB::
+        DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/CC_CORE_LIB  
+    )
+
+    configure_package_config_file(CC_CORE_LIBConfig.cmake.in
+			${CMAKE_CURRENT_BINARY_DIR}/CC_CORE_LIBConfig.cmake
+			#INSTALL_DESTINATION ${LIB_INSTALL_DIR}/CC_CORE_LIB/cmake  		
+			INSTALL_DESTINATION ${LIB_INSTALL_DIR}/CC_CORE_LIB/cmake  		
+			PATH_VARS CMAKE_INSTALL_LIBDIR  )
+
+		write_basic_package_version_file(
+    	CC_CORE_LIBConfigVersion.cmake
+    	VERSION ${PACKAGE_VERSION}
+    	COMPATIBILITY AnyNewerVersion
+    )
+
+		# write_basic_package_version_file(
+  # 		${CMAKE_CURRENT_BINARY_DIR}/CC_CORE_LIBConfigVersion.cmake
+  # 		VERSION 1.0.0
+  # 		COMPATIBILITY SameMajorVersion )
+    
+
+    install(FILES "${CMAKE_CURRENT_BINARY_DIR}/CC_CORE_LIBConfig.cmake"
+              "${CMAKE_CURRENT_BINARY_DIR}/CC_CORE_LIBConfigVersion.cmake"
+        DESTINATION lib/cmake/CC_CORE_LIB
+        )
+
+    INCLUDE(CPack)
+
+
 	endif()
 endif()
 

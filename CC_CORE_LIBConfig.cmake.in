@@ -1,0 +1,12 @@
+@PACKAGE_INIT@
+
+set(OPTION_SCALAR_DOUBLE @OPTION_SCALAR_DOUBLE@)
+
+if ( OPTION_SCALAR_DOUBLE )
+  add_definitions( -DSCALAR_TYPE_DOUBLE )
+else()
+  add_definitions( -DSCALAR_TYPE_FLOAT )
+endif()
+
+include("${CMAKE_CURRENT_LIST_DIR}/CC_CORE_LIBTargets.cmake")
+
