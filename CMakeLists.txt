@@ -82,9 +82,11 @@ target_include_directories(CC_CORE_LIB
 include( GenerateExportHeader )
 
 generate_export_header( ${PROJECT_NAME}
-	EXPORT_FILE_NAME ${_CC_PATH}/include/CCCoreLibExport.h
+	EXPORT_FILE_NAME ${CMAKE_CURRENT_BINARY_DIR}/CCCoreLibExport.h 
 	EXPORT_MACRO_NAME CC_CORE_LIB_API
 )
+
+list( APPEND header_list ${CMAKE_CURRENT_BINARY_DIR}/CCCoreLibExport.h )
 
 if (COMPILE_CC_CORE_LIB_WITH_CGAL)
 	target_link_libraries( ${PROJECT_NAME} ${CGAL_LIBRARIES} )
