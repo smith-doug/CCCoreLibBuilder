@@ -2,9 +2,9 @@ cmake_minimum_required(VERSION 3.10)
 
 cmake_policy(PUSH)
 
+# Path to the CC folder in CloudCompare, to require as little modification to this CMake as possible
 set(CC_PATH_STR "../CloudCompare/CC" CACHE STRING "Path to CloudCompare folder")
 get_filename_component(_CC_PATH ${CC_PATH_STR} ABSOLUTE)
-
 
 
 # Options
@@ -14,12 +14,9 @@ option( COMPILE_CC_CORE_LIB_WITH_TBB " Check to compile CC_CORE_LIB with Intel T
 option( COMPILE_CC_CORE_LIB_SHARED "Check to compile CC_CORE_LIB as a shared library (DLL/so)" ON )
 set( OPTION_SCALAR_DOUBLE OFF CACHE BOOL "Check to define ScalarType as double"  )
 
-#set(CMAKE_INSTALL_PREFIX "/usr")
 
 # to compile CCLib only! (CMake implicitly imposes to declare a project before anything...)
 project( CC_CORE_LIB VERSION 1.0 )
-
-
 
 if ( OPTION_SCALAR_DOUBLE )
   add_definitions( -DSCALAR_TYPE_DOUBLE )
@@ -28,23 +25,11 @@ else()
 endif()
 
 
-SET(CPACK_GENERATOR "DEB")
-SET(CPACK_PACKAGE_VENDOR "SwRI")
-SET(CPACK_PACKAGE_CONTACT "douglas.smith@swri.org")
-set(CPACK_DEBIAN_PACKAGE_ARCHITECTURE "amd64")
-set(CPACK_PACKAGE_VERSION_MAJOR 1)
-set(CPACK_PACKAGE_VERSION_MINOR 0)
-set(CPACK_PACKAGE_VERSION_PATCH 0)
-
-
 set(INSTALL_DESTINATIONS ${CMAKE_INSTALL_PREFIX}/bin )
-
-
 
 include ( ${_CC_PATH}/../cmake/CMakePolicies.cmake )
 include ( ${_CC_PATH}/../cmake/CMakeSetCompilerOptions.cmake )
 
-include(CMakePackageConfigHelpers)
 
 if (COMPILE_CC_CORE_LIB_WITH_CGAL)
 	include( ${_CC_PATH}/cmake/CGALSupport.cmake )
@@ -64,14 +49,9 @@ if (COMPILE_CC_CORE_LIB_WITH_QT)
 endif()
 
 
-
-#include_directories( ${CMAKE_CURRENT_SOURCE_DIR}/include )
-
 file( GLOB header_list ${_CC_PATH}/include/*.h)
 file( GLOB source_list ${_CC_PATH}/src/*.cpp src/*.h)
 
-#set(INCLUDE_INSTALL_DIR include/ ...  )
-#set(LIB_INSTALL_DIR lib/)
 
 if ( WIN32 )
 	# Add Qt5 natvis file
@@ -112,14 +92,14 @@ if (COMPILE_CC_CORE_LIB_WITH_CGAL)
 endif()
 
 if (COMPILE_CC_CORE_LIB_WITH_TBB)
-	include_directories( ${TBB_INCLUDE_DIRS} )
-	target_link_libraries( ${PROJECT_NAME} ${TBB_LIBRARIES} )
+	target_include_directories(${PROJECT_NAME} PUBLIC ${TBB_INCLUDE_DIRS} )
+	target_link_libraries( ${PROJECT_NAME} PUBLIC ${TBB_LIBRARIES} )
 	set_property( TARGET ${PROJECT_NAME} APPEND PROPERTY COMPILE_DEFINITIONS USE_TBB )
 endif()
 
 if ( COMPILE_CC_CORE_LIB_WITH_QT )
-	include_directories( ${Qt5Widgets_INCLUDE_DIRS} ${Qt5Core_INCLUDE_DIRS} )
-	target_link_libraries(${PROJECT_NAME} Qt5::Core Qt5::Widgets Qt5::Concurrent)
+	target_include_directories(${PROJECT_NAME} PUBLIC ${Qt5Widgets_INCLUDE_DIRS} ${Qt5Core_INCLUDE_DIRS} )
+	target_link_libraries(${PROJECT_NAME} PUBLIC Qt5::Core Qt5::Widgets Qt5::Concurrent)
 	set_property( TARGET ${PROJECT_NAME} APPEND PROPERTY COMPILE_DEFINITIONS USE_QT )
 endif()
 
@@ -153,30 +133,27 @@ if ( COMPILE_CC_CORE_LIB_SHARED )
         DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/CC_CORE_LIB  
     )
 
+    
+    include(CMakePackageConfigHelpers)
     configure_package_config_file(CC_CORE_LIBConfig.cmake.in
-			${CMAKE_CURRENT_BINARY_DIR}/CC_CORE_LIBConfig.cmake
-			#INSTALL_DESTINATION ${LIB_INSTALL_DIR}/CC_CORE_LIB/cmake  		
-			INSTALL_DESTINATION ${LIB_INSTALL_DIR}/CC_CORE_LIB/cmake  		
-			PATH_VARS CMAKE_INSTALL_LIBDIR  )
+				${CMAKE_CURRENT_BINARY_DIR}/CC_CORE_LIBConfig.cmake					
+				INSTALL_DESTINATION ${LIB_INSTALL_DIR}/CC_CORE_LIB/cmake  		
+				PATH_VARS CMAKE_INSTALL_LIBDIR  
+		)
 
 		write_basic_package_version_file(
-    	CC_CORE_LIBConfigVersion.cmake
-    	VERSION ${PACKAGE_VERSION}
-    	COMPATIBILITY AnyNewerVersion
-    )
-
-		# write_basic_package_version_file(
-  # 		${CMAKE_CURRENT_BINARY_DIR}/CC_CORE_LIBConfigVersion.cmake
-  # 		VERSION 1.0.0
-  # 		COMPATIBILITY SameMajorVersion )
-    
+	    	CC_CORE_LIBConfigVersion.cmake
+	    	VERSION ${PACKAGE_VERSION}
+	    	COMPATIBILITY AnyNewerVersion
+    )    
 
     install(FILES "${CMAKE_CURRENT_BINARY_DIR}/CC_CORE_LIBConfig.cmake"
               "${CMAKE_CURRENT_BINARY_DIR}/CC_CORE_LIBConfigVersion.cmake"
         DESTINATION lib/cmake/CC_CORE_LIB
         )
 
-    INCLUDE(CPack)
+    include(CPackConfig.cmake)
+   	include(CPack)
 
 
 	endif()
