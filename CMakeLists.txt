@@ -12,7 +12,7 @@ option( COMPILE_CC_CORE_LIB_WITH_QT "Check to compile CC_CORE_LIB with Qt (to en
 option( COMPILE_CC_CORE_LIB_WITH_CGAL "Check to compile CC_CORE_LIB with CGAL lib. (to enable Delaunay 2.5D triangulation with a GPL compliant licence)" OFF )
 option( COMPILE_CC_CORE_LIB_WITH_TBB " Check to compile CC_CORE_LIB with Intel Threading Building Blocks lib (enables some parallel processing )" ON )
 option( COMPILE_CC_CORE_LIB_SHARED "Check to compile CC_CORE_LIB as a shared library (DLL/so)" ON )
-set( OPTION_SCALAR_DOUBLE OFF CACHE BOOL "Check to define ScalarType as double"  )
+set( OPTION_SCALAR_DOUBLE OFF CACHE BOOL "Check to define ScalarType as double" OFF)
 
 
 # to compile CCLib only! (CMake implicitly imposes to declare a project before anything...)
